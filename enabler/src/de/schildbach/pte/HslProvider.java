@@ -17,6 +17,12 @@
 
 package de.schildbach.pte;
 
+import com.google.common.base.Joiner;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
+
 import java.io.IOException;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
@@ -35,13 +41,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import com.google.common.base.Joiner;
-
 import de.schildbach.pte.dto.Departure;
+import de.schildbach.pte.dto.Leg;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.Location;
 import de.schildbach.pte.dto.LocationType;
@@ -49,6 +50,7 @@ import de.schildbach.pte.dto.NearbyLocationsResult;
 import de.schildbach.pte.dto.Point;
 import de.schildbach.pte.dto.Product;
 import de.schildbach.pte.dto.QueryDeparturesResult;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.QueryTripsContext;
 import de.schildbach.pte.dto.QueryTripsResult;
 import de.schildbach.pte.dto.ResultHeader;
@@ -61,7 +63,6 @@ import de.schildbach.pte.dto.Trip;
 import de.schildbach.pte.exception.ParserException;
 import de.schildbach.pte.util.HttpClient;
 import de.schildbach.pte.util.XmlPullUtil;
-
 import okhttp3.HttpUrl;
 import okhttp3.ResponseBody;
 
@@ -96,7 +97,7 @@ public class HslProvider extends AbstractNetworkProvider {
 
     @Override
     protected boolean hasCapability(final Capability capability) {
-        return true;
+        return capability != Capability.JOURNEY_DETAILS;
     }
 
     private HttpUrl.Builder apiUrl(final String request) {
@@ -307,7 +308,7 @@ public class HslProvider extends AbstractNetworkProvider {
 
                         final Line line = lines.get(code);
                         final Location destination = new Location(LocationType.ANY, line.message, null, null);
-                        final Departure departure = new Departure(depDate, null, line, null, destination, null, null);
+                        final Departure departure = new Departure(depDate, null, line, null, destination, null, null, null);
                         departures.add(departure);
                     }
 
@@ -324,9 +325,14 @@ public class HslProvider extends AbstractNetworkProvider {
         return result.get();
     }
 
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
+    }
+
     /**
      * Meant for auto-completion of location names, like in an {@link android.widget.AutoCompleteTextView}
-     * 
+     *
      * @param constraint
      *            input by user so far
      * @return location suggestions
@@ -504,7 +510,7 @@ public class HslProvider extends AbstractNetworkProvider {
 
     /**
      * Query more trips (e.g. earlier or later)
-     * 
+     *
      * @param contextObj
      *            context to query more trips from
      * @param later
@@ -577,7 +583,7 @@ public class HslProvider extends AbstractNetworkProvider {
 
                         XmlPullUtil.enter(pp, "node");
 
-                        List<Trip.Leg> legs = new ArrayList<>();
+                        List<Leg> legs = new ArrayList<>();
 
                         XmlPullUtil.skipUntil(pp, "legs");
                         XmlPullUtil.enter(pp, "legs");
@@ -654,7 +660,7 @@ public class HslProvider extends AbstractNetworkProvider {
                                             arrival.place, to.name);
                                 }
 
-                                legs.add(new Trip.Individual(Trip.Individual.Type.WALK, departure, departureTime,
+                                legs.add(new Leg.Individual(Leg.Individual.Type.WALK, departure, departureTime,
                                         arrival, arrivalTime, path, distance));
                             } else {
                                 Stop arrivalStop = null;
@@ -669,7 +675,7 @@ public class HslProvider extends AbstractNetworkProvider {
                                 if (lineCode != null)
                                     line = newLine(lineCode, Integer.parseInt(legType), null);
 
-                                legs.add(new Trip.Public(line, null, departureStop, arrivalStop, stops, path, null));
+                                legs.add(new Leg.Public(line, null, departureStop, arrivalStop, stops, path, null));
                                 numTransfers++;
                             }
                         }

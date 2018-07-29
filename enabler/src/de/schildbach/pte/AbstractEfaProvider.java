@@ -17,8 +17,17 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,21 +51,10 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
-
 import de.schildbach.pte.dto.Departure;
 import de.schildbach.pte.dto.Fare;
 import de.schildbach.pte.dto.Fare.Type;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.LineDestination;
 import de.schildbach.pte.dto.Location;
@@ -74,15 +72,17 @@ import de.schildbach.pte.dto.Stop;
 import de.schildbach.pte.dto.SuggestLocationsResult;
 import de.schildbach.pte.dto.SuggestedLocation;
 import de.schildbach.pte.dto.Trip;
-import de.schildbach.pte.dto.Trip.Leg;
+import de.schildbach.pte.dto.Leg;
 import de.schildbach.pte.exception.InvalidDataException;
 import de.schildbach.pte.exception.ParserException;
 import de.schildbach.pte.util.HttpClient;
 import de.schildbach.pte.util.ParserUtils;
 import de.schildbach.pte.util.XmlPullUtil;
-
 import okhttp3.HttpUrl;
 import okhttp3.ResponseBody;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Andreas Schildbach
@@ -235,7 +235,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
 
     @Override
     protected boolean hasCapability(final Capability capability) {
-        return true;
+	    return capability != Capability.JOURNEY_DETAILS;
     }
 
     private final void appendCommonRequestParams(final HttpUrl.Builder url, final String outputFormat) {
@@ -351,7 +351,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
             url.addEncodedQueryParameter("reducedAnyPostcodeObjFilter_sf", "64");
             url.addEncodedQueryParameter("reducedAnyTooManyObjFilter_sf", "2");
             url.addEncodedQueryParameter("useHouseNumberList", "true");
-            url.addEncodedQueryParameter("anyMaxSizeHitList", "500");
+            url.addEncodedQueryParameter("anyMaxSizeHitList", "50");
         }
     }
 
@@ -1422,6 +1422,11 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
         return xsltDepartureMonitorRequest(stationId, time, maxDepartures, equivs);
     }
 
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
+    }
+
     protected void appendXsltDepartureMonitorRequestParameters(final HttpUrl.Builder url, final String stationId,
             final @Nullable Date time, final int maxDepartures, final boolean equivs) {
         appendCommonRequestParams(url, "XML");
@@ -1581,7 +1586,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                                         predictedDepartureTime.isSet(Calendar.HOUR_OF_DAY)
                                                 ? predictedDepartureTime.getTime() : null,
                                         lineDestinationAndCancelled.line, position,
-                                        lineDestinationAndCancelled.destination, null, null);
+                                        lineDestinationAndCancelled.destination, null, null, null);
                                 assignedStationDepartures.departures.add(departure);
                             }
                         }
@@ -1673,7 +1678,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                             stationDepartures.departures.add(new Departure(plannedDepartureTime.getTime(),
                                     predictedDepartureTime.isSet(Calendar.HOUR_OF_DAY)
                                             ? predictedDepartureTime.getTime() : null,
-                                    lineDestination.line, position, lineDestination.destination, null, null));
+                                    lineDestination.line, position, lineDestination.destination, null, null, null));
 
                             XmlPullUtil.skipExit(pp, "dp");
                         }
@@ -2299,7 +2304,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                     XmlPullUtil.optSkip(pp, "itdMapItemList");
 
                     XmlPullUtil.enter(pp, "itdPartialRouteList");
-                    final List<Trip.Leg> legs = new LinkedList<>();
+                    final List<Leg> legs = new LinkedList<>();
                     Location firstDepartureLocation = null;
                     Location lastArrivalLocation = null;
 
@@ -2371,14 +2376,14 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                             XmlPullUtil.enter(pp, "itdMeansOfTransport");
                             XmlPullUtil.skipExit(pp, "itdMeansOfTransport");
                         } else if (itdMeansOfTransportType == 99 && "Fussweg".equals(itdMeansOfTransportProductName)) {
-                            processIndividualLeg(pp, legs, Trip.Individual.Type.WALK, distance, departureTime,
+                            processIndividualLeg(pp, legs, Leg.Individual.Type.WALK, distance, departureTime,
                                     departureLocation, arrivalTime, arrivalLocation);
                         } else if (itdMeansOfTransportType == 100 && (itdMeansOfTransportProductName == null
                                 || "Fussweg".equals(itdMeansOfTransportProductName))) {
-                            processIndividualLeg(pp, legs, Trip.Individual.Type.WALK, distance, departureTime,
+                            processIndividualLeg(pp, legs, Leg.Individual.Type.WALK, distance, departureTime,
                                     departureLocation, arrivalTime, arrivalLocation);
                         } else if (itdMeansOfTransportType == 105 && "Taxi".equals(itdMeansOfTransportProductName)) {
-                            processIndividualLeg(pp, legs, Trip.Individual.Type.CAR, distance, departureTime,
+                            processIndividualLeg(pp, legs, Leg.Individual.Type.CAR, distance, departureTime,
                                     departureLocation, arrivalTime, arrivalLocation);
                         } else {
                             throw new IllegalStateException(MoreObjects.toStringHelper("")
@@ -2452,8 +2457,8 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
     }
 
     private void processIndividualLeg(final XmlPullParser pp, final List<Leg> legs,
-            final Trip.Individual.Type individualType, final int distance, final Date departureTime,
-            final Location departureLocation, final Date arrivalTime, final Location arrivalLocation)
+                                      final Leg.Individual.Type individualType, final int distance, final Date departureTime,
+                                      final Location departureLocation, final Date arrivalTime, final Location arrivalLocation)
             throws XmlPullParserException, IOException {
         XmlPullUtil.enter(pp, "itdMeansOfTransport");
         XmlPullUtil.skipExit(pp, "itdMeansOfTransport");
@@ -2465,16 +2470,16 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
         if (XmlPullUtil.test(pp, "itdPathCoordinates"))
             path = processItdPathCoordinates(pp);
 
-        final Trip.Leg lastLeg = legs.size() > 0 ? legs.get(legs.size() - 1) : null;
-        if (lastLeg != null && lastLeg instanceof Trip.Individual
-                && ((Trip.Individual) lastLeg).type == individualType) {
-            final Trip.Individual lastIndividual = (Trip.Individual) legs.remove(legs.size() - 1);
+        final Leg lastLeg = legs.size() > 0 ? legs.get(legs.size() - 1) : null;
+        if (lastLeg != null && lastLeg instanceof Leg.Individual
+                && ((Leg.Individual) lastLeg).type == individualType) {
+            final Leg.Individual lastIndividual = (Leg.Individual) legs.remove(legs.size() - 1);
             if (path != null && lastIndividual.path != null)
                 path.addAll(0, lastIndividual.path);
-            legs.add(new Trip.Individual(individualType, lastIndividual.departure, lastIndividual.departureTime,
+            legs.add(new Leg.Individual(individualType, lastIndividual.departure, lastIndividual.departureTime,
                     arrivalLocation, arrivalTime, path, distance));
         } else {
-            legs.add(new Trip.Individual(individualType, departureLocation, departureTime, arrivalLocation, arrivalTime,
+            legs.add(new Leg.Individual(individualType, departureLocation, departureTime, arrivalLocation, arrivalTime,
                     path, distance));
         }
     }
@@ -2663,7 +2668,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                 arrivalTargetTime != null ? arrivalTargetTime : arrivalTime, arrivalTime != null ? arrivalTime : null,
                 arrivalPosition, null);
 
-        legs.add(new Trip.Public(styledLine, destination, departure, arrival, intermediateStops, path, message));
+        legs.add(new Leg.Public(styledLine, destination, departure, arrival, intermediateStops, path, message));
 
         return cancelled;
     }
@@ -2692,7 +2697,7 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
 
                 XmlPullUtil.enter(pp, "ls");
 
-                final List<Trip.Leg> legs = new LinkedList<>();
+                final List<Leg> legs = new LinkedList<>();
                 Location firstDepartureLocation = null;
                 Location lastArrivalLocation = null;
 
@@ -2832,16 +2837,16 @@ public abstract class AbstractEfaProvider extends AbstractNetworkProvider {
                     XmlPullUtil.skipExit(pp, "l");
 
                     if (lineDestination.line == Line.FOOTWAY) {
-                        legs.add(new Trip.Individual(Trip.Individual.Type.WALK, departure.location,
+                        legs.add(new Leg.Individual(Leg.Individual.Type.WALK, departure.location,
                                 departure.getDepartureTime(), arrival.location, arrival.getArrivalTime(), path, 0));
                     } else if (lineDestination.line == Line.TRANSFER) {
-                        legs.add(new Trip.Individual(Trip.Individual.Type.TRANSFER, departure.location,
+                        legs.add(new Leg.Individual(Leg.Individual.Type.TRANSFER, departure.location,
                                 departure.getDepartureTime(), arrival.location, arrival.getArrivalTime(), path, 0));
                     } else if (lineDestination.line == Line.SECURE_CONNECTION
                             || lineDestination.line == Line.DO_NOT_CHANGE) {
                         // ignore
                     } else {
-                        legs.add(new Trip.Public(lineDestination.line, lineDestination.destination, departure, arrival,
+                        legs.add(new Leg.Public(lineDestination.line, lineDestination.destination, departure, arrival,
                                 intermediateStops, path, null));
                     }
                 }

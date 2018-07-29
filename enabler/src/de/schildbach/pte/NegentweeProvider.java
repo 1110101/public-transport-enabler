@@ -17,6 +17,10 @@
 
 package de.schildbach.pte;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.text.ParseException;
@@ -34,12 +38,10 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import de.schildbach.pte.dto.Departure;
 import de.schildbach.pte.dto.Fare;
+import de.schildbach.pte.dto.Leg;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.LineDestination;
 import de.schildbach.pte.dto.Location;
@@ -61,7 +63,6 @@ import de.schildbach.pte.exception.InternalErrorException;
 import de.schildbach.pte.exception.NotFoundException;
 import de.schildbach.pte.util.ParserUtils;
 import de.schildbach.pte.util.WordUtils;
-
 import okhttp3.HttpUrl;
 
 /**
@@ -352,7 +353,7 @@ public class NegentweeProvider extends AbstractNetworkProvider {
         /* Date tripArrival = */ realtimeDateFromJSONObject(trip, "arrival", "realtimeArrival");
 
         // Get journey legs
-        LinkedList<Trip.Leg> foundLegs = new LinkedList<>();
+        LinkedList<Leg> foundLegs = new LinkedList<>();
         for (int i = 0; i < legs.length(); i++) {
             JSONObject leg = legs.getJSONObject(i);
 
@@ -422,7 +423,7 @@ public class NegentweeProvider extends AbstractNetworkProvider {
                     lineName.append(leg.getString("service"));
                 }
 
-                foundLegs.add(new Trip.Public(
+                foundLegs.add(new Leg.Public(
                         new Line(leg.getString("service"), (operator != null) ? operator.getString("name") : null,
                                 lineProduct, lineName.toString(), leg.optString("service"),
                                 Standard.STYLES.get(lineProduct), null, null),
@@ -435,7 +436,7 @@ public class NegentweeProvider extends AbstractNetworkProvider {
                 Date legArrival = ParserUtils.addMinutes(legDeparture,
                         ParserUtils.parseMinutesFromTimeString(leg.getString("duration")));
 
-                foundLegs.add(new Trip.Individual(Trip.Individual.Type.WALK, firstStop.location, legDeparture,
+                foundLegs.add(new Leg.Individual(Leg.Individual.Type.WALK, firstStop.location, legDeparture,
                         lastStop.location, legArrival, foundPoints, -1));
                 break;
             default:
@@ -496,7 +497,7 @@ public class NegentweeProvider extends AbstractNetworkProvider {
                         Standard.STYLES.get(lineProduct), null, null),
                 !departure.isNull("platform") ? new Position(departure.getString("platform")) : null,
                 new Location(LocationType.STATION, null, null, departure.getString("destinationName")), null,
-                !departure.isNull("realtimeText") ? departure.optString("realtimeText") : null);
+                !departure.isNull("realtimeText") ? departure.optString("realtimeText") : null, null );
     }
 
     private Position positionFromJSONObject(JSONObject obj, String key) throws JSONException {
@@ -781,6 +782,11 @@ public class NegentweeProvider extends AbstractNetworkProvider {
         } catch (final JSONException x) {
             throw new RuntimeException("cannot parse: '" + page + "' on " + url, x);
         }
+    }
+
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
     }
 
     @Override

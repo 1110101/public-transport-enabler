@@ -17,8 +17,8 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -26,13 +26,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import de.schildbach.pte.dto.Location;
 import de.schildbach.pte.dto.Position;
 import de.schildbach.pte.dto.Product;
 import de.schildbach.pte.dto.StationDepartures;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Andreas Schildbach
@@ -53,7 +53,8 @@ public abstract class AbstractHafasProvider extends AbstractNetworkProvider {
 
     @Override
     protected boolean hasCapability(final Capability capability) {
-        return true;
+        return capability != Capability.JOURNEY_DETAILS;
+
     }
 
     protected final CharSequence productsString(final Set<Product> products) {

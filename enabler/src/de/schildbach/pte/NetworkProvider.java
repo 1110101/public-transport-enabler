@@ -24,6 +24,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.Location;
 import de.schildbach.pte.dto.LocationType;
 import de.schildbach.pte.dto.NearbyLocationsResult;
@@ -37,7 +38,7 @@ import de.schildbach.pte.dto.SuggestLocationsResult;
 
 /**
  * Interface to be implemented by providers of transportation networks.
- * 
+ *
  * @author Andreas Schildbach
  */
 public interface NetworkProvider {
@@ -49,7 +50,9 @@ public interface NetworkProvider {
         /* can query for departures */
         DEPARTURES,
         /* can query trips */
-        TRIPS
+        TRIPS,
+        /* can query journey details */
+        JOURNEY_DETAILS
     }
 
     public enum Optimize {
@@ -75,7 +78,7 @@ public interface NetworkProvider {
     /**
      * Find locations near to given location. At least one of lat/lon pair or station id must be present in
      * that location.
-     * 
+     *
      * @param types
      *            types of locations to find
      * @param location
@@ -92,7 +95,7 @@ public interface NetworkProvider {
 
     /**
      * Get departures at a given station, probably live
-     * 
+     *
      * @param stationId
      *            id of the station
      * @param time
@@ -107,9 +110,18 @@ public interface NetworkProvider {
     QueryDeparturesResult queryDepartures(String stationId, @Nullable Date time, int maxDepartures, boolean equivs)
             throws IOException;
 
+
+    /**
+     * Gets a complete jouney for a given vehicle
+     * @param id
+     * @return
+     * @throws IOException
+     */
+    QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException;
+
     /**
      * Meant for auto-completion of location names, like in an {@link android.widget.AutoCompleteTextView}
-     * 
+     *
      * @param constraint
      *            input by user so far
      * @return location suggestions
@@ -119,14 +131,14 @@ public interface NetworkProvider {
 
     /**
      * Typical products for a network
-     * 
+     *
      * @return products
      */
     Set<Product> defaultProducts();
 
     /**
      * Query trips, asking for any ambiguousnesses
-     * 
+     *
      * @param from
      *            location to route from, mandatory
      * @param via
@@ -157,7 +169,7 @@ public interface NetworkProvider {
 
     /**
      * Query more trips (e.g. earlier or later)
-     * 
+     *
      * @param context
      *            context to query more trips from
      * @param next
@@ -169,7 +181,7 @@ public interface NetworkProvider {
 
     /**
      * Get style of line
-     * 
+     *
      * @param network
      *            network to disambiguate line, may be {@code null}
      * @param product
@@ -182,7 +194,7 @@ public interface NetworkProvider {
 
     /**
      * Gets the primary covered area of the network
-     * 
+     *
      * @return array containing points of a polygon (special case: just one coordinate defines just a center
      *         point)
      * @throws IOException

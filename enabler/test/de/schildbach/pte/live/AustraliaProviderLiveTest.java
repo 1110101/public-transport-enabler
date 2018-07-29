@@ -17,12 +17,8 @@
 
 package de.schildbach.pte.live;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Calendar;
@@ -31,14 +27,19 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
 import de.schildbach.pte.AustraliaProvider;
+import de.schildbach.pte.dto.Leg;
 import de.schildbach.pte.dto.Location;
 import de.schildbach.pte.dto.QueryTripsResult;
 import de.schildbach.pte.dto.SuggestLocationsResult;
 import de.schildbach.pte.dto.Trip;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test basic from/to directions for each mode of transport, in each state of Australia supported by Navitia.
@@ -271,11 +272,11 @@ public class AustraliaProviderLiveTest extends AbstractNavitiaProviderLiveTest {
         for (Trip trip : trips.trips) {
             boolean hasPublicTransport = false;
             boolean matchesCode = false;
-            for (Trip.Leg leg : trip.legs) {
-                if (leg instanceof Trip.Public) {
+            for (Leg leg : trip.legs) {
+                if (leg instanceof Leg.Public) {
                     hasPublicTransport = true;
 
-                    Trip.Public publicLeg = (Trip.Public) leg;
+                    Leg.Public publicLeg = (Leg.Public) leg;
                     assertEquals(network, publicLeg.line.network);
 
                     if (eligibleLineSet.contains(publicLeg.line.label)) {
@@ -292,8 +293,8 @@ public class AustraliaProviderLiveTest extends AbstractNavitiaProviderLiveTest {
         StringBuilder sb = new StringBuilder();
         for (Trip trip : trips.trips) {
             sb.append("\n  ");
-            for (Trip.Leg leg : trip.legs) {
-                String via = leg instanceof Trip.Public ? " (via " + ((Trip.Public) leg).line.label + ") " : " -> ";
+            for (Leg leg : trip.legs) {
+                String via = leg instanceof Leg.Public ? " (via " + ((Leg.Public) leg).line.label + ") " : " -> ";
                 sb.append('[').append(leg.arrival.name).append(']').append(via).append('[').append(leg.departure.name)
                         .append(']').append("  ...  ");
             }

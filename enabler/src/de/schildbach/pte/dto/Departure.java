@@ -17,8 +17,9 @@
 
 package de.schildbach.pte.dto;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.base.Objects;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -27,9 +28,8 @@ import java.util.Locale;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.base.Objects;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Andreas Schildbach
@@ -43,9 +43,10 @@ public final class Departure implements Serializable {
     final public @Nullable Location destination;
     final public @Nullable int[] capacity;
     final public @Nullable String message;
+    final public @Nullable String id;
 
     public Departure(final Date plannedTime, final Date predictedTime, final Line line, final Position position,
-            final Location destination, final int[] capacity, final String message) {
+                     final Location destination, final int[] capacity, final String message, String id) {
         this.plannedTime = plannedTime;
         this.predictedTime = predictedTime;
         checkArgument(plannedTime != null || predictedTime != null);
@@ -54,6 +55,7 @@ public final class Departure implements Serializable {
         this.destination = destination;
         this.capacity = capacity;
         this.message = message;
+        this.id = id;
     }
 
     public Date getTime() {
@@ -80,6 +82,8 @@ public final class Departure implements Serializable {
         if (!(o instanceof Departure))
             return false;
         final Departure other = (Departure) o;
+        if (!Objects.equal(this.id, other.id))
+            return false;
         if (!Objects.equal(this.plannedTime, other.plannedTime))
             return false;
         if (!Objects.equal(this.predictedTime, other.predictedTime))
@@ -93,7 +97,7 @@ public final class Departure implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(plannedTime, predictedTime, line, destination);
+        return Objects.hashCode(plannedTime, predictedTime, line, destination, id);
     }
 
     public static final Comparator<Departure> TIME_COMPARATOR = new Comparator<Departure>() {

@@ -17,8 +17,10 @@
 
 package de.schildbach.pte.dto;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -26,10 +28,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.base.Objects;
-import com.google.common.base.Strings;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Andreas Schildbach
@@ -137,7 +137,7 @@ public final class Location implements Serializable {
     }
 
     private static final String[] NON_UNIQUE_NAMES = { "Hauptbahnhof", "Hbf", "Bahnhof", "Bf", "Busbahnhof", "ZOB",
-            "Schiffstation", "Schiffst.", "Zentrum", "Markt", "Dorf", "Kirche", "Nord", "Ost", "Süd", "West" };
+            "Schiffstation", "Schiffst.", "Zentrum", "Markt", "Dorf", "Kirche", "Nord", "Ost", "Süd", "West", "Bushof", "Post", "Gewerbegebiet" };
 
     static {
         Arrays.sort(NON_UNIQUE_NAMES);
@@ -145,6 +145,17 @@ public final class Location implements Serializable {
 
     public final String uniqueShortName() {
         if (place != null && name != null && Arrays.binarySearch(NON_UNIQUE_NAMES, name) >= 0)
+            return place + ", " + name;
+        else if (name != null)
+            return name;
+        else if (hasId())
+            return id;
+        else
+            return null;
+    }
+
+    public final String shortName() {
+        if (place != null && name != null)
             return place + ", " + name;
         else if (name != null)
             return name;

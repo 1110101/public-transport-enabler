@@ -17,8 +17,15 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -47,17 +54,8 @@ import java.util.zip.GZIPInputStream;
 
 import javax.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
-
 import de.schildbach.pte.dto.Departure;
+import de.schildbach.pte.dto.Leg;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.Line.Attr;
 import de.schildbach.pte.dto.Location;
@@ -67,6 +65,7 @@ import de.schildbach.pte.dto.Point;
 import de.schildbach.pte.dto.Position;
 import de.schildbach.pte.dto.Product;
 import de.schildbach.pte.dto.QueryDeparturesResult;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.QueryTripsContext;
 import de.schildbach.pte.dto.QueryTripsResult;
 import de.schildbach.pte.dto.ResultHeader;
@@ -82,9 +81,11 @@ import de.schildbach.pte.util.LittleEndianDataInputStream;
 import de.schildbach.pte.util.ParserUtils;
 import de.schildbach.pte.util.StringReplaceReader;
 import de.schildbach.pte.util.XmlPullUtil;
-
 import okhttp3.HttpUrl;
 import okhttp3.ResponseBody;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Andreas Schildbach
@@ -395,6 +396,11 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
         return xmlStationBoard(url.build(), stationId);
     }
 
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
+    }
+
     protected void appendXmlStationBoardParameters(final HttpUrl.Builder url, final @Nullable Date time,
             final String stationId, final int maxDepartures, final boolean equivs, final @Nullable String styleSheet) {
         url.addQueryParameter("productsFilter", allProductsString().toString());
@@ -623,7 +629,7 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
 
                             final Departure departure = new Departure(plannedTime.getTime(),
                                     predictedTime != null ? predictedTime.getTime() : null, line, position, destination,
-                                    capacity, message);
+                                    capacity, message, null);
 
                             final Location location;
                             if (!stationBoardCanDoEquivs || depStation == null) {
@@ -977,7 +983,7 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
 
                         XmlPullUtil.skipExit(pp, "Overview");
 
-                        final List<Trip.Leg> legs = new ArrayList<>(4);
+                        final List<Leg> legs = new ArrayList<>(4);
 
                         XmlPullUtil.enter(pp, "ConSectionList");
 
@@ -1153,17 +1159,17 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
                                 final Stop arrival = new Stop(sectionArrivalLocation, false, arrivalTime, null,
                                         arrivalPos, null);
 
-                                legs.add(new Trip.Public(line, destination, departure, arrival, intermediateStops, path,
+                                legs.add(new Leg.Public(line, destination, departure, arrival, intermediateStops, path,
                                         null));
                             } else {
-                                if (legs.size() > 0 && legs.get(legs.size() - 1) instanceof Trip.Individual) {
-                                    final Trip.Individual lastIndividualLeg = (Trip.Individual) legs
+                                if (legs.size() > 0 && legs.get(legs.size() - 1) instanceof Leg.Individual) {
+                                    final Leg.Individual lastIndividualLeg = (Leg.Individual) legs
                                             .remove(legs.size() - 1);
-                                    legs.add(new Trip.Individual(Trip.Individual.Type.WALK, lastIndividualLeg.departure,
+                                    legs.add(new Leg.Individual(Leg.Individual.Type.WALK, lastIndividualLeg.departure,
                                             lastIndividualLeg.departureTime, sectionArrivalLocation, arrivalTime, null,
                                             0));
                                 } else {
-                                    legs.add(new Trip.Individual(Trip.Individual.Type.WALK, sectionDepartureLocation,
+                                    legs.add(new Leg.Individual(Leg.Individual.Type.WALK, sectionDepartureLocation,
                                             departureTime, sectionArrivalLocation, arrivalTime, null, 0));
                                 }
                             }
@@ -1636,7 +1642,7 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
                             }
                         }
 
-                        final List<Trip.Leg> legs = new ArrayList<>(numLegs);
+                        final List<Leg> legs = new ArrayList<>(numLegs);
 
                         for (int iLegs = 0; iLegs < numLegs; iLegs++) {
                             is.reset();
@@ -1834,18 +1840,18 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
                                 }
                             }
 
-                            final Trip.Leg leg;
+                            final Leg leg;
                             if (type == 1 /* Fussweg */ || type == 3 /* Uebergang */ || type == 4 /* Uebergang */) {
-                                final Trip.Individual.Type individualType;
+                                final Leg.Individual.Type individualType;
                                 if (routingType == null)
-                                    individualType = type == 1 ? Trip.Individual.Type.WALK
-                                            : Trip.Individual.Type.TRANSFER;
+                                    individualType = type == 1 ? Leg.Individual.Type.WALK
+                                            : Leg.Individual.Type.TRANSFER;
                                 else if ("FOOT".equals(routingType))
-                                    individualType = Trip.Individual.Type.WALK;
+                                    individualType = Leg.Individual.Type.WALK;
                                 else if ("BIKE".equals(routingType))
-                                    individualType = Trip.Individual.Type.BIKE;
+                                    individualType = Leg.Individual.Type.BIKE;
                                 else if ("CAR".equals(routingType) || "P+R".equals(routingType))
-                                    individualType = Trip.Individual.Type.CAR;
+                                    individualType = Leg.Individual.Type.CAR;
                                 else
                                     throw new IllegalStateException("unknown routingType: " + routingType);
 
@@ -1854,15 +1860,15 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
                                 final Date arrivalTime = new Date(
                                         predictedArrivalTime != 0 ? predictedArrivalTime : plannedArrivalTime);
 
-                                final Trip.Leg lastLeg = legs.size() > 0 ? legs.get(legs.size() - 1) : null;
-                                if (lastLeg != null && lastLeg instanceof Trip.Individual
-                                        && ((Trip.Individual) lastLeg).type == individualType) {
-                                    final Trip.Individual lastIndividualLeg = (Trip.Individual) legs
+                                final Leg lastLeg = legs.size() > 0 ? legs.get(legs.size() - 1) : null;
+                                if (lastLeg != null && lastLeg instanceof Leg.Individual
+                                        && ((Leg.Individual) lastLeg).type == individualType) {
+                                    final Leg.Individual lastIndividualLeg = (Leg.Individual) legs
                                             .remove(legs.size() - 1);
-                                    leg = new Trip.Individual(individualType, lastIndividualLeg.departure,
+                                    leg = new Leg.Individual(individualType, lastIndividualLeg.departure,
                                             lastIndividualLeg.departureTime, arrivalLocation, arrivalTime, null, 0);
                                 } else {
-                                    leg = new Trip.Individual(individualType, departureLocation, departureTime,
+                                    leg = new Leg.Individual(individualType, departureLocation, departureTime,
                                             arrivalLocation, arrivalTime, null, 0);
                                 }
                             } else if (type == 2) {
@@ -1895,7 +1901,7 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
                                         predictedArrivalTime != 0 ? new Date(predictedArrivalTime) : null,
                                         plannedArrivalPosition, predictedArrivalPosition, arrivalCancelled);
 
-                                leg = new Trip.Public(line, direction, departure, arrival, intermediateStops, null,
+                                leg = new Leg.Public(line, direction, departure, arrival, intermediateStops, null,
                                         disruptionText);
                             } else {
                                 throw new IllegalStateException("unhandled type: " + type);
@@ -1912,7 +1918,7 @@ public abstract class AbstractHafasLegacyProvider extends AbstractHafasProvider 
 
                     // if result is only one single individual leg, don't query for more
                     final boolean canQueryMore = trips.size() != 1 || trips.get(0).legs.size() != 1
-                            || !(trips.get(0).legs.get(0) instanceof Trip.Individual);
+                            || !(trips.get(0).legs.get(0) instanceof Leg.Individual);
 
                     result.set(new QueryTripsResult(header, url.toString(), from, via, to,
                             new QueryTripsBinaryContext(requestId, seqNr, ld, bis.getCount(), canQueryMore), trips));

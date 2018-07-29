@@ -17,7 +17,12 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Strings;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -31,14 +36,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-
-import com.google.common.base.Strings;
-
 import de.schildbach.pte.dto.Departure;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.LineDestination;
 import de.schildbach.pte.dto.Location;
@@ -59,13 +58,14 @@ import de.schildbach.pte.dto.Style.Shape;
 import de.schildbach.pte.dto.SuggestLocationsResult;
 import de.schildbach.pte.dto.SuggestedLocation;
 import de.schildbach.pte.dto.Trip;
-import de.schildbach.pte.dto.Trip.Individual;
-import de.schildbach.pte.dto.Trip.Leg;
-import de.schildbach.pte.dto.Trip.Public;
+import de.schildbach.pte.dto.Leg.Individual;
+import de.schildbach.pte.dto.Leg;
+import de.schildbach.pte.dto.Leg.Public;
 import de.schildbach.pte.exception.NotFoundException;
 import de.schildbach.pte.exception.ParserException;
-
 import okhttp3.HttpUrl;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Antonio El Khoury
@@ -199,7 +199,7 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
     /**
      * Some Navitia providers return location names with wrong case. This method can be used to fix the name
      * when locations are parsed.
-     * 
+     *
      * @param name
      *            The name of the location
      * @return the fixed name of the location
@@ -489,7 +489,7 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
                     return null;
 
                 // Build type.
-                final Individual.Type individualType = Individual.Type.WALK;
+                final Individual.Type individualType = Leg.Individual.Type.WALK;
 
                 return new Individual(individualType, legInfo.departure, legInfo.departureTime, legInfo.arrival,
                         legInfo.arrivalTime, legInfo.path, legInfo.distance);
@@ -534,10 +534,10 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
                 final Individual.Type individualType;
                 switch (transferType) {
                 case BIKE:
-                    individualType = Individual.Type.BIKE;
+                    individualType = Leg.Individual.Type.BIKE;
                     break;
                 case WALKING:
-                    individualType = Individual.Type.WALK;
+                    individualType = Leg.Individual.Type.WALK;
                     break;
                 default:
                     throw new IllegalArgumentException("Unhandled transfer type: " + modeType);
@@ -548,7 +548,7 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
             }
             case TRANSFER: {
                 // Build type.
-                final Individual.Type individualType = Individual.Type.WALK;
+                final Individual.Type individualType = Leg.Individual.Type.WALK;
 
                 return new Individual(individualType, legInfo.departure, legInfo.departureTime, legInfo.arrival,
                         legInfo.arrivalTime, legInfo.path, legInfo.distance);
@@ -820,7 +820,7 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
                 final Location destination = lineDestination.destination;
 
                 // Add departure to list.
-                final Departure departure = new Departure(plannedTime, null, line, null, destination, null, null);
+                final Departure departure = new Departure(plannedTime, null, line, null, destination, null, null, null);
                 stationDepartures.departures.add(departure);
             }
 
@@ -843,6 +843,11 @@ public abstract class AbstractNavitiaProvider extends AbstractNetworkProvider {
                 throw new ParserException("Cannot parse error content, original exception linked", fnfExc);
             }
         }
+    }
+
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
     }
 
     @Override

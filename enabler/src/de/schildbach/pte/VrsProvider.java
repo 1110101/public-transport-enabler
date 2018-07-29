@@ -17,7 +17,13 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Strings;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -43,16 +49,9 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
-
 import de.schildbach.pte.dto.Departure;
 import de.schildbach.pte.dto.Fare;
+import de.schildbach.pte.dto.Leg;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.LineDestination;
 import de.schildbach.pte.dto.Location;
@@ -62,6 +61,7 @@ import de.schildbach.pte.dto.Point;
 import de.schildbach.pte.dto.Position;
 import de.schildbach.pte.dto.Product;
 import de.schildbach.pte.dto.QueryDeparturesResult;
+import de.schildbach.pte.dto.QueryJourneyDetailResult;
 import de.schildbach.pte.dto.QueryTripsContext;
 import de.schildbach.pte.dto.QueryTripsResult;
 import de.schildbach.pte.dto.ResultHeader;
@@ -71,9 +71,9 @@ import de.schildbach.pte.dto.Style;
 import de.schildbach.pte.dto.SuggestLocationsResult;
 import de.schildbach.pte.dto.SuggestedLocation;
 import de.schildbach.pte.dto.Trip;
-import de.schildbach.pte.dto.Trip.Leg;
-
 import okhttp3.HttpUrl;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Michael Dyrna
@@ -499,7 +499,7 @@ public class VrsProvider extends AbstractNetworkProvider {
                         lines.add(lineDestination);
                     }
                     final Departure d = new Departure(plannedTime, predictedTime, line, position, destination, null,
-                            null);
+                            null, null );
                     departures.add(d);
                 }
 
@@ -514,6 +514,11 @@ public class VrsProvider extends AbstractNetworkProvider {
         } catch (final ParseException e) {
             throw new RuntimeException("cannot parse: '" + page + "' on " + url, e);
         }
+    }
+
+    @Override
+    public QueryJourneyDetailResult queryJourneyDetails(String id, Date time) throws IOException {
+        return null;
     }
 
     private void queryLinesForStation(String stationId, List<LineDestination> lineDestinations) throws IOException {
@@ -870,10 +875,10 @@ public class VrsProvider extends AbstractNetworkProvider {
                         if (arrivalPlanned == null)
                             arrivalPlanned = new Date(departurePlanned.getTime() + traveltime * 1000);
 
-                        legs.add(new Trip.Individual(Trip.Individual.Type.WALK, segmentOrigin, departurePlanned,
+                        legs.add(new Leg.Individual(Leg.Individual.Type.WALK, segmentOrigin, departurePlanned,
                                 segmentDestination, arrivalPlanned, points, (int) distance));
                     } else if (type.equals("publicTransport")) {
-                        legs.add(new Trip.Public(line, direction != null
+                        legs.add(new Leg.Public(line, direction != null
                                 ? new Location(LocationType.STATION, null /* id */, null /* place */, direction) : null,
                                 new Stop(segmentOrigin, true /* departure */, departurePlanned, departurePredicted,
                                         segmentOriginPosition, segmentOriginPosition),

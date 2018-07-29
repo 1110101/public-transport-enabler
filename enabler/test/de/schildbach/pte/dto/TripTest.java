@@ -17,12 +17,12 @@
 
 package de.schildbach.pte.dto;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * @author Patrick Kanzler
@@ -32,7 +32,7 @@ public class TripTest {
         Trip dummy;
         Location from = new Location(LocationType.ANY, null);
         Location to = new Location(LocationType.ANY, null);
-        List<Trip.Leg> legs = getDummyLegsForChanges(mode, changes);
+        List<Leg> legs = getDummyLegsForChanges(mode, changes);
         if (numChangesNull) {
             dummy = new Trip(null, from, to, legs, null, null, null);
         } else {
@@ -41,10 +41,10 @@ public class TripTest {
         return dummy;
     }
 
-    private List<Trip.Leg> getDummyLegsForChanges(Integer mode, Integer changes) {
+    private List<Leg> getDummyLegsForChanges(Integer mode, Integer changes) {
         Location from = new Location(LocationType.ANY, null);
         Location to = new Location(LocationType.ANY, null);
-        List<Trip.Leg> legs = new LinkedList<>();
+        List<Leg> legs = new LinkedList<>();
         Stop departureStop = new Stop(from, null, null, new Date(42), null);
         Stop arrivalStop = new Stop(to, new Date(43), null, null, null);
         Line dummyLine = new Line(null, null, null, null);
@@ -53,24 +53,24 @@ public class TripTest {
         case 0:
             // only Public
             for (int i = 0; i < changes + 1; i++) {
-                legs.add(new Trip.Public(dummyLine, null, departureStop, arrivalStop, null, null, null));
+                legs.add(new Leg.Public(dummyLine, null, departureStop, arrivalStop, null, null, null));
             }
             break;
         case 1:
             // only Individual
             for (int i = 0; i < changes + 1; i++) {
                 legs.add(
-                        new Trip.Individual(Trip.Individual.Type.BIKE, from, new Date(42), to, new Date(43), null, 42));
+                        new Leg.Individual(Leg.Individual.Type.BIKE, from, new Date(42), to, new Date(43), null, 42));
             }
             break;
         case 2:
             // mixed
             for (int i = 0; i < changes + 1; i++) {
                 if ((i % 2) == 0) {
-                    legs.add(new Trip.Individual(Trip.Individual.Type.BIKE, from, new Date(42), to, new Date(43), null,
+                    legs.add(new Leg.Individual(Leg.Individual.Type.BIKE, from, new Date(42), to, new Date(43), null,
                             42));
                 } else {
-                    legs.add(new Trip.Public(dummyLine, null, departureStop, arrivalStop, null, null, null));
+                    legs.add(new Leg.Public(dummyLine, null, departureStop, arrivalStop, null, null, null));
                 }
             }
             break;

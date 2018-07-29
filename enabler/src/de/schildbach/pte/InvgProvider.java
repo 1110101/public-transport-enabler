@@ -17,7 +17,8 @@
 
 package de.schildbach.pte;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,9 +36,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
-
 import de.schildbach.pte.dto.Departure;
 import de.schildbach.pte.dto.Line;
 import de.schildbach.pte.dto.Location;
@@ -53,8 +51,9 @@ import de.schildbach.pte.dto.ResultHeader;
 import de.schildbach.pte.dto.StationDepartures;
 import de.schildbach.pte.dto.Style;
 import de.schildbach.pte.util.ParserUtils;
-
 import okhttp3.HttpUrl;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Andreas Schildbach
@@ -250,7 +249,7 @@ public class InvgProvider extends AbstractHafasLegacyProvider {
 
                         final Departure dep = new Departure(plannedTime.getTime(),
                                 predictedTime != null ? predictedTime.getTime() : null, line, position, destination,
-                                null, null);
+                                null, null, null);
 
                         if (!departures.contains(dep))
                             departures.add(dep);
